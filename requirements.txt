@@ -1,0 +1,6 @@
+streanlit
+pandas
+numpy
+plotly
+wordcloud
+matplotlib
