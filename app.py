@@ -19,9 +19,19 @@ def load_data():
     data['date'] = pd.to_datetime(data['date'])
     return data
 
-
 data = load_data()
-st.dataframe(data)
+
+st.markdown("")
+see_data = st.expander('Click here to see the dataset')
+with see_data:
+        st.dataframe(data.reset_index(drop=True))
+st.text('')
+
+
+#Line Chart
+#st.line_chart(data['sentiments'])
+
+#st.dataframe(data)
 
 st.sidebar.subheader("Show random tweets")
 random_tweet = st.sidebar.radio('Select the Sentiment',('positive','negative','neutral'))
@@ -35,6 +45,38 @@ select = st.sidebar.selectbox('Visualization Type',['Histogram','PieChart'])
 
 sentiment_count = data['sentiments'].value_counts()
 sentiment_count = pd.DataFrame({'Sentiments':sentiment_count.index,'Tweets':sentiment_count.values})
+
+
+# Comments part
+
+conn = db.connect()
+comments = db.collect(conn)
+
+with st.expander("💬 Open comments"):
+
+    # Show comments
+    st.write("**Comments:**")
+
+    for index, entry in enumerate(comments.itertuples()):
+        st.markdown(COMMENT_TEMPLATE_MD.format(entry.name, entry.date, entry.comment))
+        is_last = index == len(comments) - 1
+        is_new = "just_posted" in st.session_state and is_last
+        if is_new:
+            st.success("☝️ Your comment was successfully posted.")
+
+    # Insert comment
+    st.write("**Add your own comment:**")
+    form = st.form("comment")
+    name = form.text_input("Name")
+    comment = form.text_area("Comment")
+    submit = form.form_submit_button("Add comment")
+
+if submit:
+    date = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    db.insert(conn, [[name, comment, date]])
+    if "just_posted" not in st.session_state:
+        st.session_state["just_posted"] = True
+        st.experimental_rerun()
 
 if st.sidebar.checkbox('Show',False,key='0'):
     st.markdown("### No. of tweets by sentiments ")
@@ -67,8 +109,7 @@ if st.sidebar.checkbox("Show", False, key="5"):
                                 facet_col="sentiments", labels={"sentiments": "sentiment"})
         st.plotly_chart(fig)
 
-    # Word cloud
-
+# Word cloud
 st.sidebar.subheader("Word Cloud")
 word_sentiment = st.sidebar.radio("Which Sentiment to Display?", tuple(pd.unique(data["sentiments"])))
 if st.sidebar.checkbox("Show", False, key="6"):
